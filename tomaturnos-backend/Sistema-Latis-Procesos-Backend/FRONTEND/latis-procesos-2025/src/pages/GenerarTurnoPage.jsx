@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { Save, AlertCircle, User as UserIcon, FileText } from 'lucide-react';
+import { Save, User as UserIcon, FileText } from 'lucide-react';
 import { useAuth } from '../App';
 import CustomerSearchModal from '../components/CustomerSearchModal';
 
@@ -14,8 +14,8 @@ const mockFetchCustomerData = (customerId) => {
       if (customerId === '12345') {
         resolve({
           nombre: 'Juan',
-          apellido_paterno: 'Pérez',
-          apellido_materno: 'García',
+          apellido_paterno: 'Perez',
+          apellido_materno: 'Garcia',
           rfc: 'PEGA123456H78',
           email: 'juan.perez@example.com',
         });
@@ -31,6 +31,7 @@ const GenerarTurnoPage = () => {
   const { user, isAuthenticated } = useAuth();
 
   const [customerData, setCustomerData] = useState(null);
+  const [isExternalClient, setIsExternalClient] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(true);
   const [modalError, setModalError] = useState(null);
   const [isModalLoading, setIsModalLoading] = useState(false);
@@ -67,18 +68,45 @@ const GenerarTurnoPage = () => {
     fetchInitialData();
   }, [isAuthenticated, user]);
 
-  const handleSearchCustomer = async (customerId) => {
+  const handleSearchCustomer = async (searchData) => {
     setIsModalLoading(true);
     setModalError(null);
-    try {
-      const data = await mockFetchCustomerData(customerId);
-      setCustomerData(data);
+    
+    if (searchData.type === 'externo') {
+      setCustomerData(searchData.payload);
+      setIsExternalClient(true);
       setIsModalOpen(false);
-    } catch (error) {
-      setModalError(error.message);
-    } finally {
       setIsModalLoading(false);
+    } else {
+      // Handle internal client search
+      try {
+        const data = await mockFetchCustomerData(searchData.payload);
+        setCustomerData(data);
+        setIsExternalClient(false);
+        setIsModalOpen(false);
+      } catch (error) {
+        setModalError(error.message);
+      } finally {
+        setIsModalLoading(false);
+      }
     }
+  };
+
+  const resetTurnoState = () => {
+    setCustomerData(null);
+    setIsExternalClient(false);
+    setFormData({
+      servicio_id: '',
+      sucursal_id: isAuthenticated && user?.sucursal_id ? user.sucursal_id : '',
+    });
+    setTurnoGenerado(null);
+    setSuccessMessage('');
+    setErrors({});
+  };
+
+  const handleNewTurno = () => {
+    resetTurnoState();
+    setIsModalOpen(true);
   };
 
   const handleChange = (e) => {
@@ -95,6 +123,14 @@ const GenerarTurnoPage = () => {
       setErrors((prev) => ({ ...prev, servicio_id: '' }));
     }
   };
+
+  const filteredServicios = useMemo(() => {
+    if (isExternalClient) {
+      // Filter for services 3 and 6 for external clients
+      return servicios.filter(s => s.id === 3 || s.id === 6);
+    }
+    return servicios; // Return all services for internal clients
+  }, [servicios, isExternalClient]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -121,18 +157,14 @@ const GenerarTurnoPage = () => {
       cliente_nombre: customerData.nombre,
       cliente_apellido_paterno: customerData.apellido_paterno,
       cliente_apellido_materno: customerData.apellido_materno,
+      // RFC is optional, so it can be missing for external clients
+      ...(customerData.rfc && { rfc: customerData.rfc }),
     };
 
     try {
       const response = await axios.post(`${API_URL}/turnos`, postData);
       setSuccessMessage('¡Turno generado exitosamente!');
       setTurnoGenerado(response.data);
-      setCustomerData(null); // Reset customer data
-      setFormData({
-        servicio_id: '',
-        sucursal_id: isAuthenticated && user?.sucursal_id ? user.sucursal_id : '',
-      });
-      setTimeout(() => setIsModalOpen(true), 2000); // Re-open modal after success
     } catch (error) {
       console.error('Error al generar turno:', error);
       if (error.response?.data?.errors) {
@@ -162,7 +194,7 @@ const GenerarTurnoPage = () => {
             </div>
 
             {customerData ? (
-              <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              <div className="p-6 space-y-6">
                 {/* Customer Info Display */}
                 <div className="border-b pb-6">
                     <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
@@ -175,73 +207,91 @@ const GenerarTurnoPage = () => {
                             <p className="text-gray-800 font-semibold">{`${customerData.nombre} ${customerData.apellido_paterno} ${customerData.apellido_materno}`}</p>
                         </div>
                         <div className="bg-gray-50 p-3 rounded-lg">
-                            <p className="font-medium text-gray-500">RFC</p>
-                            <p className="text-gray-800 font-semibold">{customerData.rfc}</p>
+                            <p className="font-medium text-gray-500">Tipo de Cliente</p>
+                            <p className="text-gray-800 font-semibold">{isExternalClient ? 'Externo' : 'Interno'}</p>
                         </div>
                     </div>
                 </div>
 
-                {successMessage && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <p className="text-sm font-medium text-green-800">{successMessage}</p>
-                    {turnoGenerado && (
-                      <p className="text-sm text-green-700">
-                        Tu turno es: <span className="font-bold">{turnoGenerado.numero_turno}</span>
-                      </p>
+                {successMessage ? (
+                  <div className="text-center p-4">
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-6 max-w-md mx-auto">
+                      <p className="text-lg font-semibold text-green-800">{successMessage}</p>
+                      {turnoGenerado && (
+                        <div className="mt-4">
+                          <p className="text-base text-green-700">Tu número de turno es:</p>
+                          <p className="text-5xl font-bold text-gray-900 my-2 tracking-wider">
+                            {turnoGenerado.numero_turno}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <button 
+                      onClick={handleNewTurno}
+                      className="mt-6 px-6 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800"
+                    >
+                      Generar Nuevo Turno
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit}>
+                    {errors.general && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                        <p className="text-sm font-medium text-red-800">{errors.general}</p>
+                      </div>
                     )}
-                  </div>
-                )}
 
-                {errors.general && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <p className="text-sm font-medium text-red-800">{errors.general}</p>
-                  </div>
-                )}
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                      {(!isAuthenticated || !user?.sucursal_id) && (
+                        <div>
+                          <label htmlFor="sucursal_id" className="block text-sm font-medium text-gray-700 mb-2">Sucursal *</label>
+                          <select name="sucursal_id" id="sucursal_id" value={formData.sucursal_id} onChange={handleChange} className={`w-full px-4 py-2 border rounded-lg ${errors.sucursal_id ? 'border-red-300' : 'border-gray-300'}`} disabled={isLoading}>
+                            <option value="">Seleccione una sucursal</option>
+                            {sucursales.map((s) => <option key={s.id} value={s.id}>{s.unidad}</option>)}
+                          </select>
+                          {errors.sucursal_id && <p className="mt-1 text-sm text-red-600">{errors.sucursal_id}</p>}
+                        </div>
+                      )}
 
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                  {(!isAuthenticated || !user?.sucursal_id) && (
-                    <div>
-                      <label htmlFor="sucursal_id" className="block text-sm font-medium text-gray-700 mb-2">Sucursal *</label>
-                      <select name="sucursal_id" id="sucursal_id" value={formData.sucursal_id} onChange={handleChange} className={`w-full px-4 py-2 border rounded-lg ${errors.sucursal_id ? 'border-red-300' : 'border-gray-300'}`} disabled={isLoading}>
-                        <option value="">Seleccione una sucursal</option>
-                        {sucursales.map((s) => <option key={s.id} value={s.id}>{s.unidad}</option>)}
-                      </select>
-                      {errors.sucursal_id && <p className="mt-1 text-sm text-red-600">{errors.sucursal_id}</p>}
+                      <div className="sm:col-span-2">
+                        <label htmlFor="servicio_id" className="block text-sm font-medium text-gray-700 mb-4">Trámite a Realizar *</label>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          {filteredServicios.map((servicio) => (
+                            <button
+                              key={servicio.id}
+                              type="button"
+                              onClick={() => handleServiceSelect(servicio.id)}
+                              className={`p-4 rounded-xl text-center transition-all duration-200 border-2 ${formData.servicio_id === servicio.id
+                                  ? 'bg-gray-900 text-white border-gray-900 shadow-lg'
+                                  : 'bg-white text-gray-700 border-gray-200 hover:border-gray-900 hover:bg-gray-50'
+                                }`}
+                              disabled={isLoading}
+                            >
+                              <FileText className="w-8 h-8 mx-auto mb-2" />
+                              <span className="font-semibold text-sm">{servicio.nombre}</span>
+                            </button>
+                          ))}
+                        </div>
+                        {filteredServicios.length === 0 && !isLoading && (
+                            <div className="text-center text-gray-500 py-4 sm:col-span-2 md:col-span-3">
+                                No hay servicios disponibles para este tipo de cliente.
+                            </div>
+                        )}
+                        {errors.servicio_id && <p className="mt-2 text-sm text-red-600">{errors.servicio_id}</p>}
+                      </div>
                     </div>
-                  )}
 
-                  <div className="sm:col-span-2">
-                    <label htmlFor="servicio_id" className="block text-sm font-medium text-gray-700 mb-4">Trámite a Realizar *</label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {servicios.map((servicio) => (
-                        <button
-                          key={servicio.id}
-                          type="button"
-                          onClick={() => handleServiceSelect(servicio.id)}
-                          className={`p-4 rounded-xl text-center transition-all duration-200 border-2 ${formData.servicio_id === servicio.id
-                              ? 'bg-gray-900 text-white border-gray-900 shadow-lg'
-                              : 'bg-white text-gray-700 border-gray-200 hover:border-gray-900 hover:bg-gray-50'
-                            }`}
-                          disabled={isLoading}
-                        >
-                          <FileText className="w-8 h-8 mx-auto mb-2" />
-                          <span className="font-semibold text-sm">{servicio.nombre}</span>
-                        </button>
-                      ))}
+                    <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200 mt-6">
+                      <button type="submit" disabled={isLoading} className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 disabled:opacity-50">
+                        {isLoading ? 'Generando...' : <div className="flex items-center"><Save className="w-4 h-4 mr-2" />Generar Turno</div>}
+                      </button>
                     </div>
-                    {errors.servicio_id && <p className="mt-2 text-sm text-red-600">{errors.servicio_id}</p>}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200">
-                  <button type="submit" disabled={isLoading} className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 disabled:opacity-50">
-                    {isLoading ? 'Generando...' : <div className="flex items-center"><Save className="w-4 h-4 mr-2" />Generar Turno</div>}
-                  </button>
-                </div>
-              </form>
+                  </form>
+                )}
+              </div>
             ) : (
               <div className="p-6 text-center text-gray-500">
-                <p>Por favor, busque un cliente para continuar.</p>
+                <p>Por favor, identifique al cliente para continuar.</p>
               </div>
             )}
           </div>

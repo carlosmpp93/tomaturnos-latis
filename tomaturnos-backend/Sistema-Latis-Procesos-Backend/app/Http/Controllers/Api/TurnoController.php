@@ -17,21 +17,21 @@ class TurnoController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
+        $validatedData = $request->validate([
             'cliente_nombre' => 'required|string|max:255',
             'cliente_apellido_paterno' => 'required|string|max:255',
-            'cliente_apellido_materno' => 'required|string|max:255',
+            'cliente_apellido_materno' => 'nullable|string|max:255',
             'servicio_id' => 'required|exists:servicios,id',
             'sucursal_id' => 'required|exists:sucursales,id',
         ]);
 
-        $servicio = Servicio::findOrFail($request->servicio_id);
+        $servicio = Servicio::findOrFail($validatedData['servicio_id']);
 
         // Lógica de asignación de turno
-        $turno = DB::transaction(function () use ($request, $servicio) {
+        $turno = DB::transaction(function () use ($validatedData, $servicio) {
             // 1. Encontrar una ventanilla disponible para el servicio y sucursal solicitados.
             $ventanilla = Ventanilla::query()
-                ->where('sucursal_id', $request->sucursal_id)
+                ->where('sucursal_id', $validatedData['sucursal_id'])
                 ->whereHas('servicios', function ($query) use ($servicio) {
                     $query->where('servicios.id', $servicio->id);
                 })
@@ -41,23 +41,34 @@ class TurnoController extends Controller
                 ->orderBy('updated_at', 'asc') // Prioriza la que ha estado libre más tiempo
                 ->first();
 
-            // 2. Generar el número de turno (ej. A001)
+            // 2. Generar el número de turno de forma globalmente única por prefijo
             $prefix = strtoupper(substr($servicio->nombre, 0, 1));
-            $count = Turno::whereDate('created_at', Carbon::today())
-                        ->count() + 1;
-            $numeroTurno = $prefix . str_pad($count, 3, '0', STR_PAD_LEFT);
+            
+            // Encontrar el último turno con el mismo prefijo para determinar el siguiente número
+            $latestTurno = Turno::where('numero_turno', 'LIKE', $prefix . '%')
+                                ->orderBy('id', 'desc') // Ordenar por ID descendente es más fiable
+                                ->first();
 
-            // 3. Crear el turno
-            $turno = Turno::create([
-                'cliente_nombre' => $request->cliente_nombre,
-                'cliente_apellido_paterno' => $request->cliente_apellido_paterno,
-                'cliente_apellido_materno' => $request->cliente_apellido_materno,
-                'servicio_id' => $servicio->id,
-                'sucursal_id' => $request->sucursal_id,
-                'ventanilla_id' => $ventanilla ? $ventanilla->id : null, // Asignar si se encontró una
-                'numero_turno' => $numeroTurno,
-                'status' => $ventanilla ? 'en_espera' : 'en_espera', // Siempre en espera inicialmente
-            ]);
+            if ($latestTurno) {
+                $lastNumber = (int) substr($latestTurno->numero_turno, 1);
+                $nextNumber = $lastNumber + 1;
+            } else {
+                $nextNumber = 1; // Es el primer turno para este prefijo
+            }
+
+            $numeroTurno = $prefix . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+
+            // 3. Crear el turno de forma explícita
+            $turno = new Turno();
+            $turno->cliente_nombre = $validatedData['cliente_nombre'];
+            $turno->cliente_apellido_paterno = $validatedData['cliente_apellido_paterno'];
+            $turno->cliente_apellido_materno = $validatedData['cliente_apellido_materno'];
+            $turno->servicio_id = $validatedData['servicio_id'];
+            $turno->sucursal_id = $validatedData['sucursal_id'];
+            $turno->ventanilla_id = $ventanilla ? $ventanilla->id : null;
+            $turno->numero_turno = $numeroTurno;
+            $turno->status = 'en_espera';
+            $turno->save();
 
             return $turno;
         });
