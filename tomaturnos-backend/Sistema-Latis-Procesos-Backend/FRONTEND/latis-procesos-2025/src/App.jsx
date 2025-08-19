@@ -226,11 +226,13 @@ const FormRegistroUsuarioWrapper = () => {
   return <FormRegistroUsuario registrarUsuarioSubmit={handleRegistration} />;
 };
 
+import CdnProvider from './components/CdnProvider';
+
 // Main App Component
 const App = () => {
   const router = createBrowserRouter(
     createRoutesFromElements(
-      <Route element={<AuthProvider><MainLayout /></AuthProvider>}>
+      <Route element={<AuthProvider><CdnProvider><MainLayout /></CdnProvider></AuthProvider>}>
         {/* Protected Routes */}
         <Route index element={
           <ProtectedRoute>

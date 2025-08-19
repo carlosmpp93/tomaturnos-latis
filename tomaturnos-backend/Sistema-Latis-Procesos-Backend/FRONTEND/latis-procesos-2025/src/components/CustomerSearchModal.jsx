@@ -5,7 +5,8 @@ import { Search, X, Loader2, AlertTriangle, User, Briefcase, ArrowLeft } from 'l
 const CustomerSearchModal = ({ isOpen, onClose, onSearch, isLoading, error }) => {
   const [view, setView] = useState('initial'); // 'initial' or 'external_form'
   const [customerId, setCustomerId] = useState('');
-  const [externalClientName, setExternalClientName] = useState('');
+  const [externalClientPrimerNombre, setExternalClientPrimerNombre] = useState('');
+  const [externalClientSegundoNombre, setExternalClientSegundoNombre] = useState('');
   const [externalClientPaterno, setExternalClientPaterno] = useState('');
   const [externalClientMaterno, setExternalClientMaterno] = useState('');
   const [externalClientRfc, setExternalClientRfc] = useState('');
@@ -16,7 +17,8 @@ const CustomerSearchModal = ({ isOpen, onClose, onSearch, isLoading, error }) =>
       setTimeout(() => {
         setView('initial');
         setCustomerId('');
-        setExternalClientName('');
+        setExternalClientPrimerNombre('');
+        setExternalClientSegundoNombre('');
         setExternalClientPaterno('');
         setExternalClientMaterno('');
         setExternalClientRfc('');
@@ -33,11 +35,12 @@ const CustomerSearchModal = ({ isOpen, onClose, onSearch, isLoading, error }) =>
 
   const handleExternalSubmit = (e) => {
     e.preventDefault();
-    if (externalClientName.trim() && externalClientPaterno.trim()) {
+    if (externalClientPrimerNombre.trim() && externalClientPaterno.trim()) {
       onSearch({
         type: 'externo',
         payload: {
-          nombre: externalClientName.trim(),
+          primer_nombre: externalClientPrimerNombre.trim(),
+          segundo_nombre: externalClientSegundoNombre.trim(),
           apellido_paterno: externalClientPaterno.trim(),
           apellido_materno: externalClientMaterno.trim(),
           rfc: externalClientRfc.trim(),
@@ -107,8 +110,12 @@ const CustomerSearchModal = ({ isOpen, onClose, onSearch, isLoading, error }) =>
         </div>
         <div className="space-y-4">
             <div>
-                <label htmlFor="externalName" className="block text-sm font-medium text-gray-700 mb-1">Nombre(s) *</label>
-                <input id="externalName" type="text" value={externalClientName} onChange={(e) => setExternalClientName(e.target.value)} placeholder="Ej: Juan" className="w-full px-4 py-3 border border-gray-300 rounded-lg" required />
+                <label htmlFor="externalPrimerNombre" className="block text-sm font-medium text-gray-700 mb-1">Primer Nombre *</label>
+                <input id="externalPrimerNombre" type="text" value={externalClientPrimerNombre} onChange={(e) => setExternalClientPrimerNombre(e.target.value)} placeholder="Ej: Juan" className="w-full px-4 py-3 border border-gray-300 rounded-lg" required />
+            </div>
+            <div>
+                <label htmlFor="externalSegundoNombre" className="block text-sm font-medium text-gray-700 mb-1">Segundo Nombre</label>
+                <input id="externalSegundoNombre" type="text" value={externalClientSegundoNombre} onChange={(e) => setExternalClientSegundoNombre(e.target.value)} placeholder="Ej: Carlos" className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
             </div>
             <div>
                 <label htmlFor="externalPaterno" className="block text-sm font-medium text-gray-700 mb-1">Apellido Paterno *</label>

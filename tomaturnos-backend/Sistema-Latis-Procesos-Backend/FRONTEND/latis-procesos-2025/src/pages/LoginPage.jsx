@@ -18,30 +18,6 @@ const LoginPage = ({ loginUsuarioSubmit }) => {
   // Focus on username field on mount
   useEffect(() => {
     usernameRef.current?.focus();
-
-    // Dynamically add government CDN
-    const cdnLink = document.createElement('link');
-    cdnLink.href = "https://framework-gb.cdn.gob.mx/gm/v3/assets/styles/main.css";
-    cdnLink.rel = "stylesheet";
-    cdnLink.id = "gob-mx-cdn";
-    document.head.appendChild(cdnLink);
-
-    const cdnScript = document.createElement('script');
-    cdnScript.src = "https://framework-gb.cdn.gob.mx/gm/v3/assets/js/gobmx.js";
-    cdnScript.id = "gob-mx-script";
-    document.body.appendChild(cdnScript);
-
-    // Cleanup on component unmount
-    return () => {
-      const cdnElement = document.getElementById("gob-mx-cdn");
-      if (cdnElement) {
-        document.head.removeChild(cdnElement);
-      }
-      const scriptElement = document.getElementById("gob-mx-script");
-      if (scriptElement) {
-        document.body.removeChild(scriptElement);
-      }
-    };
   }, []);
 
   const handleChange = useCallback((e) => {

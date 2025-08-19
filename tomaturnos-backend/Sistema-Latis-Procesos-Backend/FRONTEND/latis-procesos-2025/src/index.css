@@ -1,2 +1,5 @@
 @import "tailwindcss";
 
+body:not(.login-page) footer {
+  display: none;
+}

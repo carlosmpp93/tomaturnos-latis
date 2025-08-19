@@ -18,7 +18,8 @@ class TurnoController extends Controller
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            'cliente_nombre' => 'required|string|max:255',
+            'cliente_primer_nombre' => 'required|string|max:255',
+            'cliente_segundo_nombre' => 'nullable|string|max:255',
             'cliente_apellido_paterno' => 'required|string|max:255',
             'cliente_apellido_materno' => 'nullable|string|max:255',
             'servicio_id' => 'required|exists:servicios,id',
@@ -60,7 +61,8 @@ class TurnoController extends Controller
 
             // 3. Crear el turno de forma explícita
             $turno = new Turno();
-            $turno->cliente_nombre = $validatedData['cliente_nombre'];
+            $turno->cliente_primer_nombre = $validatedData['cliente_primer_nombre'];
+            $turno->cliente_segundo_nombre = $validatedData['cliente_segundo_nombre'];
             $turno->cliente_apellido_paterno = $validatedData['cliente_apellido_paterno'];
             $turno->cliente_apellido_materno = $validatedData['cliente_apellido_materno'];
             $turno->servicio_id = $validatedData['servicio_id'];
@@ -88,7 +90,8 @@ class TurnoController extends Controller
 
         $turno = Turno::where('ventanilla_id', $user->ventanilla_id)
             ->where('status', 'atendiendo')
-            ->with('servicio', 'cliente')
+            ->with('servicio')
+            ->select('id', 'numero_turno', 'cliente_primer_nombre', 'cliente_segundo_nombre', 'cliente_apellido_paterno', 'cliente_apellido_materno', 'servicio_id', 'status')
             ->first();
 
         if (!$turno) {
@@ -97,6 +100,7 @@ class TurnoController extends Controller
                 ->where('status', 'en_espera')
                 ->orderBy('created_at', 'asc')
                 ->with('servicio')
+                ->select('id', 'numero_turno', 'cliente_primer_nombre', 'cliente_segundo_nombre', 'cliente_apellido_paterno', 'cliente_apellido_materno', 'servicio_id', 'status')
                 ->first();
         }
 

@@ -144,7 +144,7 @@ const MonitorVentanillaPage = () => {
               <div className="border border-gray-200 rounded-lg p-6 text-center bg-blue-50">
                 <p className="text-sm font-medium text-gray-600 mb-2">Turno Actual</p>
                 <h3 className="text-5xl font-bold text-blue-800 mb-4">{currentTurn.numero_turno}</h3>
-                <p className="text-xl text-gray-800 mb-2">{currentTurn.cliente_nombre} {currentTurn.cliente_apellido_paterno} {currentTurn.cliente_apellido_materno}</p>
+                <p className="text-xl text-gray-800 mb-2">{currentTurn.cliente_primer_nombre} {currentTurn.cliente_segundo_nombre} {currentTurn.cliente_apellido_paterno} {currentTurn.cliente_apellido_materno}</p>
                 <p className="text-md text-gray-700 mb-4">Trámite: <span className="font-semibold">{currentTurn.servicio?.nombre || 'N/A'}</span></p>
                 <p className={`text-sm font-semibold px-3 py-1 rounded-full inline-block ${
                   currentTurn.status === 'atendiendo' ? 'bg-green-200 text-green-800' :

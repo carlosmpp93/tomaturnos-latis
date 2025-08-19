@@ -44,7 +44,7 @@ const Navbar = () => {
                       Monitor Ventanilla
                     </NavLink>
                     <NavLink to="/generar-turno" className={linkClass}>
-                      Generar Turno
+                      Generador de Turnos
                     </NavLink>
                   </>
                 )}

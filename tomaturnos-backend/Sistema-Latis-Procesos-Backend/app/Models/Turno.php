@@ -11,7 +11,8 @@ class Turno extends Model
 
     protected $fillable = [
         'numero_turno',
-        'cliente_nombre',
+        'cliente_primer_nombre',
+        'cliente_segundo_nombre',
         'cliente_apellido_paterno',
         'cliente_apellido_materno',
         'servicio_id',

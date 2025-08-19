@@ -13,7 +13,8 @@ const mockFetchCustomerData = (customerId) => {
     setTimeout(() => {
       if (customerId === '12345') {
         resolve({
-          nombre: 'Juan',
+          primer_nombre: 'Juan',
+          segundo_nombre: 'Carlos',
           apellido_paterno: 'Perez',
           apellido_materno: 'Garcia',
           rfc: 'PEGA123456H78',
@@ -154,7 +155,8 @@ const GenerarTurnoPage = () => {
 
     const postData = {
       ...formData,
-      cliente_nombre: customerData.nombre,
+      cliente_primer_nombre: customerData.primer_nombre,
+      cliente_segundo_nombre: customerData.segundo_nombre,
       cliente_apellido_paterno: customerData.apellido_paterno,
       cliente_apellido_materno: customerData.apellido_materno,
       // RFC is optional, so it can be missing for external clients
@@ -165,6 +167,9 @@ const GenerarTurnoPage = () => {
       const response = await axios.post(`${API_URL}/turnos`, postData);
       setSuccessMessage('¡Turno generado exitosamente!');
       setTurnoGenerado(response.data);
+      setTimeout(() => {
+        handleNewTurno();
+      }, 3000);
     } catch (error) {
       console.error('Error al generar turno:', error);
       if (error.response?.data?.errors) {
@@ -204,7 +209,7 @@ const GenerarTurnoPage = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                         <div className="bg-gray-50 p-3 rounded-lg">
                             <p className="font-medium text-gray-500">Nombre Completo</p>
-                            <p className="text-gray-800 font-semibold">{`${customerData.nombre} ${customerData.apellido_paterno} ${customerData.apellido_materno}`}</p>
+                            <p className="text-gray-800 font-semibold">{`${customerData.primer_nombre} ${customerData.segundo_nombre} ${customerData.apellido_paterno} ${customerData.apellido_materno}`}</p>
                         </div>
                         <div className="bg-gray-50 p-3 rounded-lg">
                             <p className="font-medium text-gray-500">Tipo de Cliente</p>
@@ -226,12 +231,7 @@ const GenerarTurnoPage = () => {
                         </div>
                       )}
                     </div>
-                    <button 
-                      onClick={handleNewTurno}
-                      className="mt-6 px-6 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800"
-                    >
-                      Generar Nuevo Turno
-                    </button>
+                    
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit}>
